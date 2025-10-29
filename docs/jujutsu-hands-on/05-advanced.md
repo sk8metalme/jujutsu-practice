@@ -246,10 +246,10 @@ jj log -r "~empty()"
 jj log -r "file(README.md)"
 ```
 
-#### ブランチがないコミット
+#### ブックマークがないコミット
 
 ```bash
-jj log -r "~branches()"
+jj log -r "~bookmarks()"
 ```
 
 ---
@@ -402,13 +402,18 @@ jj git fetch
 jj git push
 ```
 
-### ブランチの同期
+### ブックマーク（ブランチ）の同期
 
-jujutsuのブランチはGitのブランチとして扱われます：
+jujutsuのブックマークはGitのブランチとして扱われます：
 
 ```bash
-jj branch create feature/new-feature
-jj git push --branch feature/new-feature
+# 作業してコミット
+echo "new feature" > feature.txt
+jj commit -m "新機能を追加"
+
+# ブックマークを作成してpush
+jj bookmark create feature/new-feature -r '@-'
+jj git push --bookmark feature/new-feature
 ```
 
 GitHubやGitLabで通常通りプルリクエストを作成できます！
@@ -471,15 +476,15 @@ jj config set --user ui.default-revset '@ | trunk()'
 ```bash
 # 機能Aの作業
 jj new main
-jj branch create feature/a
 echo "feature A" > a.txt
 jj commit -m "機能A"
+jj bookmark create feature/a -r '@-'
 
 # 機能Bの作業（機能Aとは独立）
 jj new main
-jj branch create feature/b
 echo "feature B" > b.txt
 jj commit -m "機能B"
+jj bookmark create feature/b -r '@-'
 
 # 機能Aに戻る
 jj edit feature/a

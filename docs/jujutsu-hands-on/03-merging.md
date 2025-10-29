@@ -24,6 +24,129 @@ jj git init
 
 ---
 
+## ⚠️ 重要：ブックマーク作成のタイミング
+
+### よくある間違い
+
+```bash
+# ❌ 間違い：コミット後にブックマークを作成
+vim file.txt
+jj commit -m "変更"
+jj bookmark create my-branch  # 空のworking copyに付いてしまう！
+```
+
+**問題：**
+```
+@  xyz... my-branch | (empty)        ← ブックマークがここに
+◉  abc... 変更                       ← 本当はここに付けたい
+```
+
+### 正しい方法：`-r @-`で親コミットを指定
+
+```bash
+# ✅ 推奨：作業後にブックマークを作成
+vim file.txt
+jj commit -m "変更"
+jj bookmark create my-branch -r @-  # 親コミットに付ける
+```
+
+**結果：**
+```
+@  xyz... (empty)
+◉  abc... my-branch | 変更    ← ブックマークが正しい位置に
+```
+
+**💡 メリット：**
+- 警告メッセージが出ない
+- 作業内容が明確になってからブックマーク名を決められる
+- 常に同じワークフロー（編集→コミット→ブックマーク）で作業できる
+- 確実に正しい位置にブックマークが付く
+- 本ドキュメントで一貫して使用している方法
+
+---
+
+### 🪄 補足：スムーズな運用パターン
+
+実際の開発では、以下のようなワークフローを使うとスムーズです：
+
+#### 基本の標準フロー
+
+```bash
+# 1. mainから新しい作業を開始
+jj new main
+
+# 2. 作業を進める
+vim src/feature.rs
+vim tests/feature_test.rs
+
+# 3. コミット + ブックマークを一気に
+jj commit -m "機能Xを実装"
+jj bookmark create feature/x -r '@-'
+```
+
+**💡 メリット：**
+- 作業内容を確認してからブックマーク名を決められる
+- 警告メッセージが出ない
+- 確実に正しい位置にブックマークが付く
+- 本ドキュメントで一貫して使用している方法
+
+#### エイリアスで効率化
+
+頻繁に使うコマンドを短縮したい場合は、`~/.config/jj/config.toml`にエイリアスを追加：
+
+```toml
+[aliases]
+nb = ["new", "main"]  # new bookmark用のショートカット
+bc = ["bookmark", "create"]
+```
+
+使用例：
+
+```bash
+jj nb                          # mainから新しい作業開始
+vim feature.rs
+
+jj commit -m "実装"
+jj bc my-feature -r '@-'       # 素早くブックマーク作成
+```
+
+**💡 メリット：** タイピング量が減り、作業が高速化
+
+---
+
+### なぜこうなるのか？
+
+`jj commit`を実行すると：
+1. 現在の変更がコミットとして確定
+2. **自動的に新しい空のworking copyが作成される**
+3. その空のworking copyに移動
+
+この時点で`jj bookmark create`すると、空のworking copyにブックマークが付いてしまいます。
+
+### 確認方法
+
+```bash
+# ブックマークが正しい位置にあるか確認
+jj bookmark list
+
+# 警告が出たら要注意
+Warning: Target revision is empty.
+```
+
+この警告が出たら、空のコミットにブックマークを付けています！
+
+### 修正方法
+
+```bash
+# 間違ったブックマークを削除
+jj bookmark delete wrong-bookmark
+
+# 正しい位置に作り直す
+jj bookmark create correct-bookmark -r <正しいコミットID>
+```
+
+---
+
 ## 1. マージの基本概念
 
 ### マージとは？
@@ -51,14 +174,18 @@ echo "# ウェブサイトのタイトル
 ここにコンテンツが入ります。" > index.md
 
 jj commit -m "初期ウェブサイトを作成"
-jj branch create main
+jj bookmark create main -r @-
 ```
+
+**💡 ポイント：** 初回のコミットなので、`-r @-`で親コミットにブックマークを付けています。
 
 ### ブランチ1：デザインの改善
 
 ```bash
 jj new main
 ```
+
+**💡 重要：** 作業を開始する前にブックマークを作成します！
 
 ```bash
 echo "# 🎨 素敵なウェブサイトのタイトル
@@ -71,12 +198,12 @@ echo "# 🎨 素敵なウェブサイトのタイトル
 
 - モダンなデザイン
 - レスポンシブ対応" > index.md
+
+jj commit -m "デザインを改善"
+jj bookmark create feature/design -r '@-'
 ```
 
-```bash
-jj commit -m "デザインを改善"
-jj branch create feature/design
-```
+**💡 ポイント：** コミット後に`-r @-`で親コミットにブックマークを付けています。
 
 ### ブランチ2：コンテンツの追加
 
@@ -98,12 +225,12 @@ echo "# ウェブサイトのタイトル
 ### サブセクション
 
 詳細な情報がここに入ります。" > index.md
+
+jj commit -m "コンテンツを追加"
+jj bookmark create feature/content -r '@-'
 ```
 
-```bash
-jj commit -m "コンテンツを追加"
-jj branch create feature/content
-```
+**💡 ポイント：** こちらもコミット後に`-r @-`でブックマークを付けています。
 
 ### 現在の状態を確認
 
@@ -138,28 +265,32 @@ jj log
 
 ```bash
 jj new main
+
 echo "body { font-family: Arial; }" > style.css
 jj commit -m "スタイルシートを追加"
-jj branch create add-css
+jj bookmark create add-css -r '@-'
 
 jj new main
+
 echo "console.log('Hello');" > script.js
 jj commit -m "JavaScriptを追加"
-jj branch create add-js
+jj bookmark create add-js -r '@-'
 ```
+
+**💡 ポイント：** 各ブランチでコミット後に`-r @-`でブックマークを作成しています。
 
 ### 2つのブランチをマージ
 
 ```bash
-jj new
-jj commit -m "空のマージコミットを準備"
-jj merge add-css add-js
+jj new add-css add-js -m "CSSとJSをマージ"
 ```
+
+**💡 ポイント：** マージは`jj new`で複数の親を指定することで行います。`jj merge`コマンドは存在しません。
 
 **期待される出力：**
 
 ```
-Working copy now at: newcommit 3m4n5o6p (empty)
+Working copy now at: newcommit 3m4n5o6p CSSとJSをマージ
 Parent commit      : mergeid1 2a3b4c5d スタイルシートを追加
 Parent commit      : mergeid2 6d7e8f9g JavaScriptを追加
 Added 2 files, modified 0 files, removed 0 files
@@ -367,17 +498,21 @@ jujutsuには対話的にコンフリクトを解決するツールがありま�
 
 ```bash
 jj new main
+
 echo "バージョン1の内容" > conflict-test.txt
 jj commit -m "バージョン1"
-jj branch create version1
+jj bookmark create version1 -r '@-'
 
 jj new main
+
 echo "バージョン2の内容" > conflict-test.txt
 jj commit -m "バージョン2"
-jj branch create version2
+jj bookmark create version2 -r '@-'
 
 jj new version1 version2 -m "バージョンをマージ"
 ```
+
+**💡 ポイント：** 各ブランチでコミット後に`-r @-`でブックマークを作成しています。
 
 コンフリクトが発生します。
 
@@ -438,10 +573,28 @@ jj abandon @
 ### 練習1：クリーンなマージ
 
 1. 新しいリポジトリを作成
-2. `feature-a`ブランチで`file-a.txt`を作成
-3. `feature-b`ブランチで`file-b.txt`を作成
+2. `feature-a`ブックマークを作成して、`file-a.txt`を作成
+3. `feature-b`ブックマークを作成して、`file-b.txt`を作成
 4. 2つをマージ
 5. 両方のファイルが存在することを確認
+
+**正しい手順：**
+```bash
+jj git init
+
+echo "feature A" > file-a.txt
+jj commit -m "feature-aを追加"
+jj bookmark create feature-a -r '@-'
+
+jj new 'root()'
+
+echo "feature B" > file-b.txt
+jj commit -m "feature-bを追加"
+jj bookmark create feature-b -r '@-'
+
+jj new feature-a feature-b -m "マージ"
+ls  # file-a.txt と file-b.txt の両方を確認
+```
 
 ### 練習2：コンフリクトの作成と解決
 
@@ -450,6 +603,29 @@ jj abandon @
 3. ブランチ2で「タイトル B」に変更
 4. マージしてコンフリクトを発生させる
 5. 手動で「タイトル C」に解決
+
+**正しい手順：**
+```bash
+echo "タイトル" > README.md
+jj commit -m "READMEを作成"
+jj bookmark create base -r '@-'
+
+jj new base
+
+echo "タイトル A" > README.md
+jj commit -m "タイトルをAに変更"
+jj bookmark create branch-a -r '@-'
+
+jj new base
+
+echo "タイトル B" > README.md
+jj commit -m "タイトルをBに変更"
+jj bookmark create branch-b -r '@-'
+
+jj new branch-a branch-b -m "マージ"
+vim README.md  # コンフリクトを解決して「タイトル C」に
+jj status  # 確認
+```
 
 ### 練習3：複雑なコンフリクト
 

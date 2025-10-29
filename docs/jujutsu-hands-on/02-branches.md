@@ -92,6 +92,8 @@ jj log
 
 ### シナリオ：数学関数を追加する
 
+まず、ファイルを作成します：
+
 ```bash
 echo "def add(a, b):
     return a + b
@@ -112,26 +114,30 @@ jj status
 jj commit -m "数学ユーティリティ関数を追加"
 ```
 
----
-
-## 4. ブランチに名前を付ける
-
-現在のコミットにブランチ名を付けましょう。
+### ブックマークを作成
 
 ```bash
-jj branch create feature/math-utils
+jj bookmark create feature/math-utils -r '@-'
 ```
 
-**期待される出力：**
+**💡 重要：** コミット後に`-r @-`でブックマークを作成します！
 
+---
+
+## 4. 履歴を確認する
+
+コミット履歴を見てみましょう。
+
+```bash
+jj log
 ```
-Created branch feature/math-utils pointing to pqzwxryv
-```
+
+ブックマークがコミットに正しく付いています！
 
 ### ブランチの一覧を確認
 
 ```bash
-jj branch list
+jj bookmark list
 ```
 
 **期待される出力：**
@@ -218,11 +224,13 @@ echo "# プロジェクトの使い方
 jj commit -m "使い方のドキュメントを追加"
 ```
 
-### ブランチ名を付ける
+### ブックマークを作成
 
 ```bash
-jj branch create feature/docs
+jj bookmark create feature/docs -r '@-'
 ```
+
+**💡 重要：** コミット後に`-r @-`でブックマークを作成します！
 
 ---
 
@@ -368,20 +376,209 @@ jj log -r feature/math-utils
 
 ---
 
+## 11. 💡 いつブックマークを使うべきか？
+
+Jujutsuの重要な哲学：**ブックマークは「名前が必要な時だけ」付ける**
+
+Gitと違い、すべてのコミットにブランチ名を付ける必要はありません。Change IDで管理できるからです。
+
+### ✅ ブックマークが必要なタイミング
+
+#### 1. リモートにプッシュする時（最も重要）
+
+```bash
+# 方法1：ブックマークなしでプッシュ（自動生成）
+jj git push -c @-
+# → "push-kntqzsqt" のような名前で自動作成される
+
+# 方法2：明示的な名前でプッシュ（推奨）
+jj bookmark create api-feature -r '@-'
+jj git push --bookmark api-feature
+```
+
+**理由：** GitHubなどのリモートは「ブランチ名」を期待するため。
+
+#### 2. 他のチームメンバーと共有する時
+
+```bash
+jj bookmark create feature-user-auth -r '@-'
+jj git push --bookmark feature-user-auth
+```
+
+**理由：** チームメンバーが`git checkout feature-user-auth`で取得できるようにするため。
+
+#### 3. 長期的に参照したいポイントを作る時
+
+```bash
+jj bookmark create release-v2.0 -r '@-'
+jj bookmark create stable-main -r '@-'
+```
+
+**理由：** 後から「あのバージョン」を簡単に見つけられるように。
+
+### ❌ ブックマークが不要なタイミング
+
+#### 1. 個人で作業している間
+
+```bash
+# ブックマークなしで十分
+jj new main
+jj commit -m "ログイン機能の実装"
+
+jj new
+jj commit -m "バリデーション追加"
+
+jj new
+jj commit -m "テスト追加"
+
+# jj log で全部見える
+jj log -r 'mine()'
+```
+
+**理由：** Change IDで追跡できるから。
+
+#### 2. 複数の機能を同時進行している時
+
+```bash
+# 3つの機能を並行作業
+jj new main
+# ... 機能A の作業 ...
+jj commit -m "機能A"
+
+jj new main
+# ... 機能B の作業 ...
+jj commit -m "機能B"
+
+jj new main
+# ... 機能C の作業 ...
+jj commit -m "機能C"
+
+# jj edit で自由に移動
+jj log
+jj edit <change-id>
+```
+
+**理由：** `jj log`や`jj edit`で十分管理できるから。
+
+#### 3. 実験的な変更を試す時
+
+```bash
+jj new
+jj commit -m "試しにリファクタリング"
+
+# うまくいかなかったら
+jj abandon @
+```
+
+**理由：** 一時的な作業にブックマークは過剰。
+
+### 🚀 実践的なワークフロー例
+
+#### パターン1：最小限のブックマーク使用（推奨）
+
+```bash
+# 1. 開発中はブックマークなし
+jj new main
+# ... 数日間開発 ...
+jj commit -m "API実装"
+
+jj new
+jj commit -m "テスト追加"
+
+jj new
+jj commit -m "ドキュメント更新"
+
+# 2. 完成したらブックマーク付与
+jj bookmark create api-endpoint-v2 -r '@-'
+
+# 3. プッシュ
+jj git push --bookmark api-endpoint-v2
+```
+
+**メリット：**
+- 開発中は自由に実験できる
+- 完成してから適切な名前を付けられる
+- ブックマークの管理が楽
+
+#### パターン2：Git風（最初からブックマーク）
+
+```bash
+# 最初からブックマーク
+jj new main
+jj commit -m "初期実装"
+jj bookmark create my-feature -r '@-'
+
+# ... 追加開発 ...
+jj new my-feature
+jj commit -m "機能追加"
+
+# ブックマークを最新に移動
+jj bookmark set my-feature -r '@-'
+```
+
+**メリット：**
+- Gitに慣れている人には分かりやすい
+- 最初から整理された状態
+
+### 📋 ブックマーク管理のベストプラクティス
+
+#### ✅ 良い使い方
+
+```bash
+# PRごとに1つのブックマーク
+jj bookmark create pr-123-fix-login-bug -r '@-'
+
+# 重要なマイルストーンに付ける
+jj bookmark create before-major-refactor -r '@-'
+jj bookmark create release-candidate-v2.0 -r '@-'
+
+# チーム共有用の明確な名前
+jj bookmark create feature/user-authentication -r '@-'
+```
+
+#### ❌ 避けるべき使い方
+
+```bash
+# すべての変更にブックマークを付ける（不要）
+jj bookmark create temp-work-1 -r '@-'
+jj bookmark create temp-work-2 -r '@-'
+jj bookmark create wip-stuff -r '@-'
+jj bookmark create debug-test -r '@-'
+
+# → Change IDで十分管理できます！
+```
+
+### 🎯 まとめ
+
+**Jujutsuのブックマークは「名前が必要な時だけ」付ける**
+
+必要なとき：
+- ✅ リモートプッシュ時
+- ✅ チーム共有時
+- ✅ 長期参照ポイント
+
+不要なとき：
+- ❌ 個人で作業中
+- ❌ 実験的な変更
+- ❌ 一時的な作業
+
+**💡 重要：** Gitの「すべてのコミットがブランチに属する」という考え方から脱却するのがポイントです。Jujutsuでは**Change IDで管理し、必要な時だけ名前（ブックマーク）を付ける**のが正しい使い方です。
+
+---
+
 ## やってみよう！
 
 以下の練習問題に挑戦してください：
 
 ### 練習1：新しいブランチを作成
 
-1. ルートコミットに戻る：`jj edit root()`
-2. 新しいコミットを作成：`jj new`
-3. `.gitignore`ファイルを作成
-4. コミットして`feature/gitignore`ブランチを作成
+1. ルートコミットから新しいコミットを作成：`jj new 'root()'`
+2. `.gitignore`ファイルを作成
+3. コミットしてブックマークを作成：`jj commit -m ".gitignoreを追加"` → `jj bookmark create feature/gitignore -r '@-'`
 
 ### 練習2：ブランチを行き来する
 
-1. `jj branch list`で全ブランチを確認
+1. `jj bookmark list`で全ブランチを確認
 2. それぞれのブランチに`jj edit`で移動
 3. 各ブランチで`ls`を実行してファイルを確認
 4. どのブランチにどのファイルがあるか理解する
@@ -407,7 +604,7 @@ jj log
 ### ブランチが見つからない
 
 ```bash
-jj branch list
+jj bookmark list
 ```
 
 で全ブランチを確認
@@ -438,13 +635,13 @@ jj op log
 
 - 完全なchange ID：`qpvuntsm`
 - 短縮版：`qpv`（一意に識別できる最小の文字数）
-- ブランチ名：`feature/math-utils`
+- ブックマーク名：`feature/math-utils`
 - 特殊な記号：
   - `@`：現在のworking copy
   - `@-`：親コミット
   - `@+`：子コミット
 
-### ブランチの役割
+### ブランチ（ブックマーク）の役割
 
 - コミットに人間が読みやすい名前を付ける
 - 複数の作業を整理する
@@ -458,8 +655,8 @@ jj op log
 
 - [ ] `jj new`で新しいコミットを作成できた
 - [ ] `jj edit`で過去のコミットに移動できた
-- [ ] `jj branch create`でブランチを作成できた
-- [ ] `jj branch list`でブランチ一覧を確認できた
+- [ ] `jj bookmark create`でブランチ（ブックマーク）を作成できた
+- [ ] `jj bookmark list`でブランチ一覧を確認できた
 - [ ] 複数のブランチを行き来できた
 - [ ] `jj log`で枝分かれした履歴を確認できた
 - [ ] change IDの指定方法を理解した

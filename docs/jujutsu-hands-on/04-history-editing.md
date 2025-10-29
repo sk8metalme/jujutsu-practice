@@ -284,20 +284,23 @@ jj commit -m "バックエンドとデータベースを追加"
 ### シナリオ：ブランチの付け替え
 
 ```bash
-jj new root()
+jj new 'root()'
+
 echo "version 1" > base.txt
 jj commit -m "バージョン1"
-jj branch create v1
+jj bookmark create v1 -r '@-'
 
-jj new root()
+jj new 'root()'
+
 echo "version 2" > base.txt
 jj commit -m "バージョン2"
-jj branch create v2
+jj bookmark create v2 -r '@-'
 
 jj new v1
+
 echo "feature for v1" > feature.txt
 jj commit -m "v1用の機能"
-jj branch create feature
+jj bookmark create feature -r '@-'
 ```
 
 ### 履歴を確認
@@ -438,6 +441,205 @@ jj op undo
 ```bash
 jj op restore OPERATION_ID
 ```
+
+---
+
+## 11. ワークフローの比較：Git風 vs スカッシュ
+
+jujutsuには、複数のワークフローがあります。プロジェクトやチームの方針に合わせて選択できます。
+
+### パターン1：Git風ワークフロー（`jj commit`を使う）
+
+**特徴：** 各変更を明確に分けて、確定したコミットを積み重ねる
+
+```bash
+jj new main
+
+# ログイン機能を実装
+vim auth.py
+jj commit -m "ログイン機能"
+
+# バリデーション追加
+vim validation.py
+jj commit -m "バリデーション追加"
+
+# テスト追加
+vim test_auth.py
+jj commit -m "テスト追加"
+
+# 結果：3つの確定したコミット
+```
+
+**履歴：**
+```
+@  (empty)
+◉  テスト追加
+◉  バリデーション追加
+◉  ログイン機能
+◉  main
+```
+
+**向いている人：**
+- Gitの感覚で使いたい
+- 各変更を明確に分けたい
+- チームでGit経験者が多い
+- 変更の履歴を詳細に残したい
+
+**メリット：**
+- Gitからの移行が簡単
+- 直感的でわかりやすい
+- 各コミットが独立している
+
+---
+
+### パターン2：スカッシュワークフロー（`jj commit`を使わない）
+
+**特徴：** 細かく作業を進めながら、最終的に1つの洗練されたコミットにまとめる
+
+```bash
+jj new main
+jj describe -m "ログイン機能実装"
+
+# 最初の実装（少し実装）
+vim auth.py
+jj new
+# ... さらに実装 ...
+jj squash
+
+# バリデーション追加（少し実装）
+vim validation.py
+jj new
+# ... さらに実装 ...
+jj squash
+
+# テスト追加（少し実装）
+vim test_auth.py
+jj new
+# ... さらに実装 ...
+jj squash
+
+# 結果：1つの洗練されたコミット
+```
+
+**履歴：**
+```
+@  (empty)
+◉  ログイン機能実装（すべての変更を含む）
+◉  main
+```
+
+**向いている人：**
+- 作業を細かく調整したい
+- 最終的にクリーンな履歴にしたい
+- PRやコードレビューで1つのまとまった変更として提出したい
+- 試行錯誤のプロセスを履歴に残したくない
+
+**メリット：**
+- クリーンな履歴が作れる
+- 柔軟に作業を進められる
+- 中間の試行錯誤を隠せる
+- PRレビューが楽になる
+
+---
+
+### パターン3：混合スタイル（現実的なアプローチ）
+
+**特徴：** 大きな機能は分けて、細かい調整はsquash
+
+```bash
+# データベース層の実装
+jj new main
+vim database.py
+vim models.py
+jj commit -m "データベース層"
+
+# API層の実装
+vim api.py
+vim routes.py
+jj commit -m "API層"
+
+# 細かい調整はsquash
+jj new
+vim database.py  # 微調整1
+jj squash
+
+vim api.py       # 微調整2
+jj squash
+
+vim database.py  # さらに微調整
+jj squash
+```
+
+**履歴：**
+```
+@  (empty)
+◉  API層（微調整を含む）
+◉  データベース層（微調整を含む）
+◉  main
+```
+
+**向いている人：**
+- 論理的な単位で履歴を残したい
+- 柔軟性と明確さのバランスを取りたい
+- 大規模なプロジェクトで作業している
+- レビュー可能な単位でコミットを分けたい
+
+**メリット：**
+- 履歴が理解しやすい
+- 柔軟に作業できる
+- レビューしやすい単位
+- 現実的で実用的
+
+---
+
+### ワークフロー選択ガイド
+
+| 基準 | Git風 | スカッシュ | 混合 |
+|------|--------|----------|------|
+| Git経験者 | ⭐⭐⭐ | ⭐ | ⭐⭐ |
+| クリーンな履歴 | ⭐ | ⭐⭐⭐ | ⭐⭐ |
+| 柔軟な作業 | ⭐ | ⭐⭐⭐ | ⭐⭐ |
+| PRレビュー | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
+| 学習コスト | 低い | 高い | 中程度 |
+| チーム導入 | 簡単 | 難しい | 中程度 |
+
+### 💡 チーム導入のステップ
+
+**ステップ1：Git風から始める（1-2週間）**
+```bash
+# 慣れるまではGit風
+jj commit -m "変更1"
+jj commit -m "変更2"
+```
+
+**ステップ2：`jj describe`を覚える（1週間）**
+```bash
+# コミット後にメッセージ変更
+jj commit -m "WIP"
+# ... 作業完了 ...
+jj describe -m "機能X完了"  # メッセージ更新
+```
+
+**ステップ3：`jj squash`を試す（1-2週間）**
+```bash
+# 細かい調整をまとめる
+jj commit -m "機能X"
+# ... 微調整 ...
+jj commit -m "typo修正"
+jj squash  # 親にまとめる
+```
+
+**ステップ4：混合スタイルを採用（継続）**
+```bash
+# 大きな変更は分ける、細かい調整はsquash
+# チームで最適なバランスを見つける
+```
+
+### 🎯 おすすめの始め方
+
+1. **個人プロジェクト**：Git風から始めて、慣れたらスカッシュを試す
+2. **チーム導入**：Git風から始めて、徐々に混合スタイルへ移行
+3. **経験者**：最初から混合スタイルで、状況に応じて使い分ける
 
 ---
 
