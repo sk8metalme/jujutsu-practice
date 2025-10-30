@@ -1,1 +1,1 @@
-# jujutsu-practice
+# My First Jujutsu Project

@@ -1,0 +1,835 @@
+# 04. 履歴編集：過去を変更する力
+
+このセクションでは、jujutsuの最も強力な機能の一つである履歴編集を学びます。コミット後でも、自由に履歴を整理・修正できます。
+
+## 学習目標
+
+- コミットメッセージを修正する
+- コミットの内容を変更する
+- 複数のコミットを統合する（squash）
+- コミットを分割する
+- リベース操作を行う
+- コミットを削除する
+
+---
+
+## 準備：練習用のリポジトリ
+
+```bash
+cd ~/Desktop
+mkdir jj-history-practice
+cd jj-history-practice
+jj git init
+```
+
+---
+
+## 1. コミットメッセージの修正（`jj describe`）
+
+### シナリオ：typoのあるコミットを作成
+
+```bash
+echo "def hello():
+    print('Hello, World!')" > hello.py
+
+jj commit -m "Helo function を追加"  # typo!
+```
+
+### メッセージを修正
+
+```bash
+jj describe @- -m "Hello関数を追加"
+```
+
+**💡 重要：** `@-` で親コミット（一つ前のコミット）を指定します。これを省略すると、空のworking copyのメッセージを変更してしまいます！
+
+**期待される出力：**
+
+```
+Updated commit qpvuntsm f5e7d6c8 Hello関数を追加
+```
+
+### 履歴を確認
+
+```bash
+jj log
+```
+
+コミットメッセージが修正されています！
+
+### 💡 ポイント
+
+- `jj describe`は現在のコミット（`@`）のメッセージを変更
+- 特定のコミットを指定することも可能：`jj describe REVISION -m "新しいメッセージ"`
+- change IDは変わりません！
+
+---
+
+## 2. コミットの内容を変更する
+
+### シナリオ：コミット後に修正が必要
+
+```bash
+jj new
+echo "def goodbye():
+    print('Goodby!')" > goodbye.py  # typo!
+
+jj commit -m "goodbye関数を追加"
+```
+
+typoに気づきました！
+
+### 過去のコミットを編集
+
+```bash
+jj edit @-
+```
+
+`@-`は「一つ前のコミット」を意味します。
+
+### ファイルを修正
+
+```bash
+echo "def goodbye():
+    print('Goodbye!')" > goodbye.py  # 修正
+```
+
+### 状態を確認
+
+```bash
+jj status
+```
+
+**出力：**
+
+```
+Working copy changes:
+M goodbye.py
+Working copy : rlvkpnrz 8e9f0a1b goodbye関数を追加
+Parent commit: qpvuntsm f5e7d6c8 Hello関数を追加
+```
+
+### 変更を確定
+
+jujutsuでは、`jj edit` で過去のコミットに移動すると、そのコミット自体がworking copyになります。ファイルを編集すると、変更は**自動的に**そのコミットに記録されます！
+
+#### 方法1：そのままにする（変更は自動記録済み）
+
+```bash
+# 変更は既に記録されているので、何もしなくてOK
+jj status  # 確認
+```
+
+**💡 重要：** Gitの `git commit --amend` は不要です！jujutsuでは編集が自動的に記録されます。
+
+#### 方法2：メッセージも変更したい場合
+
+```bash
+jj describe -m "goodbye関数を追加（typo修正）"
+```
+
+#### 方法3：新しいコミットとして作成
+
+```bash
+jj commit -m "typoを修正"
+```
+
+修正が新しいコミットとして記録されます。後で `jj squash` で統合することもできます。
+
+### 元の位置に戻る
+
+```bash
+jj edit @
+```
+
+---
+
+## 3. コミットの統合（`jj squash`）
+
+複数の小さなコミットを1つにまとめます。
+
+### シナリオ：細かいコミットが多数
+
+```bash
+jj new
+echo "# 数学ライブラリ" > math_lib.py
+jj commit -m "数学ライブラリのファイルを作成"
+
+jj new
+echo "# 数学ライブラリ
+
+def add(a, b):
+    return a + b" >> math_lib.py
+jj commit -m "add関数を追加"
+
+jj new
+echo "
+def subtract(a, b):
+    return a - b" >> math_lib.py
+jj commit -m "subtract関数を追加"
+
+jj new
+echo "
+def multiply(a, b):
+    return a * b" >> math_lib.py
+jj commit -m "multiply関数を追加"
+```
+
+### 履歴を確認
+
+```bash
+jj log --limit 5
+```
+
+4つの細かいコミットがあります。
+
+### 3つのコミットを1つに統合
+
+```bash
+jj squash --from @--- --to @-
+```
+
+**引数の説明：**
+- `@---`：3つ前のコミット
+- `@-`：1つ前のコミット
+- これらの範囲のコミットを統合
+
+### より簡単な方法
+
+現在のコミットを親コミットに統合：
+
+```bash
+jj edit @-
+jj squash
+```
+
+これで現在のコミットの変更が親コミットに統合されます。
+
+### 履歴を確認
+
+```bash
+jj log --limit 5
+```
+
+コミットが統合されています！
+
+---
+
+## 4. 対話的なsquash
+
+### 事前準備：diff-editorの設定
+
+対話的なsquashを使用する前に、diff-editorを設定する必要があります。
+
+```bash
+# vimを使用する場合
+jj config set --user ui.diff-editor "vimdiff"
+
+# VS Codeを使用する場合（配列形式）
+jj config set --user ui.diff-editor '["code", "--wait", "--diff", "$left", "$right"]'
+
+# 組み込みエディタを使用する場合（警告を消す）
+jj config set --user ui.diff-editor ":builtin"
+```
+
+**💡 おすすめ：** 最初は組み込みエディタ（`:builtin`）で試すのが簡単です。
+
+### 部分的に変更を統合
+
+```bash
+jj new
+echo "test line 1" > test1.txt
+echo "test line 2" > test2.txt
+jj commit -m "テストファイルを追加"
+
+jj new
+echo "test line 1 modified" > test1.txt
+echo "test line 2 modified" > test2.txt
+jj commit -m "テストファイルを修正"
+```
+
+`test1.txt`の変更だけを親コミットに統合したい場合：
+
+```bash
+jj squash --interactive
+```
+
+対話的なインターフェースで、統合したい変更を選択できます。
+
+**💡 ヒント：** 組み込みエディタの場合、左右の差分を見ながら、取り込みたい変更を選択します。操作方法が表示されるので、指示に従ってください。
+
+---
+
+## 5. コミットの分割（`jj split`）
+
+1つのコミットを複数のコミットに分割します。
+
+**💡 注意：** `jj split` は対話的なdiff-editorを使用します。まだ設定していない場合は、セクション4の「事前準備：diff-editorの設定」を参照してください。
+
+### シナリオ：複数の変更を1つのコミットにしてしまった
+
+```bash
+jj new
+echo "frontend code" > frontend.js
+echo "backend code" > backend.py
+echo "database schema" > schema.sql
+jj commit -m "色々追加"  # 良くない！
+```
+
+### 方法1：対話的にコミットを分割
+
+```bash
+jj edit @-
+jj split
+```
+
+対話的なインターフェースが開きます：
+
+1. 最初のコミットに含めるファイルを選択
+2. 残りは自動的に2つ目のコミットになる
+
+**💡 ヒント：** 組み込みエディタの場合、左側から右側に変更を移動させることで、1つ目のコミットに含めるファイルを選択します。
+
+### 方法2：手動で分割（エディタ不要）
+
+対話的なエディタを使わずに、手動で分割することもできます：
+
+```bash
+jj edit @-
+```
+
+一部のファイルだけを新しいコミットに：
+
+```bash
+jj restore --from @- frontend.js
+jj commit -m "フロントエンドコードを追加"
+
+# 残りのファイル
+jj restore --from @- backend.py schema.sql
+jj commit -m "バックエンドとデータベースを追加"
+```
+
+---
+
+## 6. リベース（`jj rebase`）
+
+コミットの親を変更します。
+
+### シナリオ：ブランチの付け替え
+
+```bash
+jj new 'root()'
+
+echo "version 1" > base.txt
+jj commit -m "バージョン1"
+jj bookmark create v1 -r '@-'
+
+jj new 'root()'
+
+echo "version 2" > base.txt
+jj commit -m "バージョン2"
+jj bookmark create v2 -r '@-'
+
+jj new v1
+
+echo "feature for v1" > feature.txt
+jj commit -m "v1用の機能"
+jj bookmark create feature -r '@-'
+```
+
+### 履歴を確認
+
+```bash
+jj log
+```
+
+`feature`ブランチは`v1`から派生しています。
+
+### `feature`を`v2`ベースに変更
+
+```bash
+jj rebase -s feature -d v2
+```
+
+**引数の説明：**
+- `-s feature`：source（移動元）
+- `-d v2`：destination（移動先）
+
+### 履歴を確認
+
+```bash
+jj log
+```
+
+`feature`ブランチが`v2`から派生するようになりました！
+
+---
+
+## 7. リベースの別パターン
+
+### 範囲指定でリベース
+
+複数のコミットをまとめて移動：
+
+```bash
+jj rebase -s "start_commit::end_commit" -d destination
+```
+
+### 現在のコミットをリベース
+
+```bash
+jj rebase -d new_parent
+```
+
+現在のコミット（`@`）が`new_parent`の子になります。
+
+---
+
+## 8. コミットの削除（`jj abandon`）
+
+不要なコミットを削除します。
+
+### コミットを削除
+
+```bash
+jj abandon REVISION
+```
+
+**重要：**
+- コミット自体は削除されますが、変更内容は子コミットに引き継がれます
+- 「コミットをスキップする」イメージ
+
+### 例
+
+```bash
+jj new
+echo "unwanted" > unwanted.txt
+jj commit -m "不要なコミット"
+
+jj new
+echo "important" > important.txt
+jj commit -m "重要なコミット"
+
+# 不要なコミットを削除
+jj abandon @--
+```
+
+「不要なコミット」は削除されますが、`unwanted.txt`の内容は「重要なコミット」に引き継がれます。
+
+---
+
+## 9. 複数コミットを同時に操作
+
+### 範囲指定
+
+```bash
+# @からさかのぼって3つのコミット
+jj log -r "@::@---"
+
+# 特定のブランチまでのすべてのコミット
+jj log -r "branch1::branch2"
+```
+
+### 複数のコミットを削除
+
+```bash
+jj abandon "start::end"
+```
+
+---
+
+## 10. 操作の取り消し（`jj op undo`）
+
+間違った操作をしてしまった場合、元に戻せます！
+
+### 操作履歴を確認
+
+```bash
+jj op log
+```
+
+**期待される出力：**
+
+```
+@  12ab34cd taro@example.com 2025-10-23 11:30:45
+│  abandon commit
+│  args: jj abandon abc123
+◉  56ef78gh taro@example.com 2025-10-23 11:29:22
+│  commit f5e7d6c8abc123
+│  args: jj commit -m "重要なコミット"
+◉  90ij12kl taro@example.com 2025-10-23 11:28:10
+│  commit 8e9f0a1bdef456
+   args: jj commit -m "不要なコミット"
+```
+
+### 直前の操作を取り消し
+
+```bash
+jj op undo
+```
+
+最後の操作が取り消されます！
+
+### 特定の操作まで戻る
+
+```bash
+jj op restore OPERATION_ID
+```
+
+---
+
+## 11. ワークフローの比較：Git風 vs スカッシュ
+
+jujutsuには、複数のワークフローがあります。プロジェクトやチームの方針に合わせて選択できます。
+
+### パターン1：Git風ワークフロー（`jj commit`を使う）
+
+**特徴：** 各変更を明確に分けて、確定したコミットを積み重ねる
+
+```bash
+jj new main
+
+# ログイン機能を実装
+vim auth.py
+jj commit -m "ログイン機能"
+
+# バリデーション追加
+vim validation.py
+jj commit -m "バリデーション追加"
+
+# テスト追加
+vim test_auth.py
+jj commit -m "テスト追加"
+
+# 結果：3つの確定したコミット
+```
+
+**履歴：**
+```
+@  (empty)
+◉  テスト追加
+◉  バリデーション追加
+◉  ログイン機能
+◉  main
+```
+
+**向いている人：**
+- Gitの感覚で使いたい
+- 各変更を明確に分けたい
+- チームでGit経験者が多い
+- 変更の履歴を詳細に残したい
+
+**メリット：**
+- Gitからの移行が簡単
+- 直感的でわかりやすい
+- 各コミットが独立している
+
+---
+
+### パターン2：スカッシュワークフロー（`jj commit`を使わない）
+
+**特徴：** 細かく作業を進めながら、最終的に1つの洗練されたコミットにまとめる
+
+```bash
+jj new main
+jj describe -m "ログイン機能実装"
+
+# 最初の実装（少し実装）
+vim auth.py
+jj new
+# ... さらに実装 ...
+jj squash
+
+# バリデーション追加（少し実装）
+vim validation.py
+jj new
+# ... さらに実装 ...
+jj squash
+
+# テスト追加（少し実装）
+vim test_auth.py
+jj new
+# ... さらに実装 ...
+jj squash
+
+# 結果：1つの洗練されたコミット
+```
+
+**履歴：**
+```
+@  (empty)
+◉  ログイン機能実装（すべての変更を含む）
+◉  main
+```
+
+**向いている人：**
+- 作業を細かく調整したい
+- 最終的にクリーンな履歴にしたい
+- PRやコードレビューで1つのまとまった変更として提出したい
+- 試行錯誤のプロセスを履歴に残したくない
+
+**メリット：**
+- クリーンな履歴が作れる
+- 柔軟に作業を進められる
+- 中間の試行錯誤を隠せる
+- PRレビューが楽になる
+
+---
+
+### パターン3：混合スタイル（現実的なアプローチ）
+
+**特徴：** 大きな機能は分けて、細かい調整はsquash
+
+```bash
+# データベース層の実装
+jj new main
+vim database.py
+vim models.py
+jj commit -m "データベース層"
+
+# API層の実装
+vim api.py
+vim routes.py
+jj commit -m "API層"
+
+# 細かい調整はsquash
+jj new
+vim database.py  # 微調整1
+jj squash
+
+vim api.py       # 微調整2
+jj squash
+
+vim database.py  # さらに微調整
+jj squash
+```
+
+**履歴：**
+```
+@  (empty)
+◉  API層（微調整を含む）
+◉  データベース層（微調整を含む）
+◉  main
+```
+
+**向いている人：**
+- 論理的な単位で履歴を残したい
+- 柔軟性と明確さのバランスを取りたい
+- 大規模なプロジェクトで作業している
+- レビュー可能な単位でコミットを分けたい
+
+**メリット：**
+- 履歴が理解しやすい
+- 柔軟に作業できる
+- レビューしやすい単位
+- 現実的で実用的
+
+---
+
+### ワークフロー選択ガイド
+
+| 基準 | Git風 | スカッシュ | 混合 |
+|------|--------|----------|------|
+| Git経験者 | ⭐⭐⭐ | ⭐ | ⭐⭐ |
+| クリーンな履歴 | ⭐ | ⭐⭐⭐ | ⭐⭐ |
+| 柔軟な作業 | ⭐ | ⭐⭐⭐ | ⭐⭐ |
+| PRレビュー | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
+| 学習コスト | 低い | 高い | 中程度 |
+| チーム導入 | 簡単 | 難しい | 中程度 |
+
+### 💡 チーム導入のステップ
+
+**ステップ1：Git風から始める（1-2週間）**
+```bash
+# 慣れるまではGit風
+jj commit -m "変更1"
+jj commit -m "変更2"
+```
+
+**ステップ2：`jj describe`を覚える（1週間）**
+```bash
+# コミット後にメッセージ変更
+jj commit -m "WIP"
+# ... 作業完了 ...
+jj describe -m "機能X完了"  # メッセージ更新
+```
+
+**ステップ3：`jj squash`を試す（1-2週間）**
+```bash
+# 細かい調整をまとめる
+jj commit -m "機能X"
+# ... 微調整 ...
+jj commit -m "typo修正"
+jj squash  # 親にまとめる
+```
+
+**ステップ4：混合スタイルを採用（継続）**
+```bash
+# 大きな変更は分ける、細かい調整はsquash
+# チームで最適なバランスを見つける
+```
+
+### 🎯 おすすめの始め方
+
+1. **個人プロジェクト**：Git風から始めて、慣れたらスカッシュを試す
+2. **チーム導入**：Git風から始めて、徐々に混合スタイルへ移行
+3. **経験者**：最初から混合スタイルで、状況に応じて使い分ける
+
+---
+
+## やってみよう！
+
+以下の練習問題に挑戦してください：
+
+### 練習1：コミットメッセージの修正
+
+1. 3つのコミットを作成（意図的に誤字を入れる）
+2. それぞれのメッセージを修正
+3. `jj log`で確認
+
+### 練習2：コミットの統合
+
+1. 5つの小さなコミットを作成
+2. 2番目と3番目のコミットを統合
+3. さらに4番目と5番目を統合
+4. 履歴が3つのコミットになっていることを確認
+
+### 練習3：コミットの分割
+
+1. 3つの異なるファイルを1つのコミットに含める
+2. コミットを3つに分割
+3. それぞれに適切なメッセージを付ける
+
+### 練習4：リベース
+
+1. `main`ブランチに2つのコミット
+2. `feature`ブランチを1つ目のコミットから作成
+3. `feature`を2つ目のコミットにリベース
+4. 履歴を可視化して確認
+
+### 練習5：操作の取り消し
+
+1. いくつかの操作を実行
+2. `jj op log`で履歴を確認
+3. `jj op undo`で戻す
+4. もう一度`jj op log`で確認
+
+---
+
+## トラブルシューティング
+
+### change IDが見つからない
+
+```bash
+jj log --limit 20
+```
+
+で最近のコミットを表示
+
+### リベース後にコンフリクト
+
+```bash
+jj status
+```
+
+でコンフリクトを確認し、前のセクションの方法で解決
+
+### 操作を間違えた
+
+```bash
+jj op undo
+```
+
+で即座に元に戻す！
+
+### 複雑な履歴で混乱
+
+```bash
+jj log --graph --color always | less -R
+```
+
+でグラフィカルな履歴を表示
+
+---
+
+## 重要な概念のまとめ
+
+### jujutsuの履歴編集の利点
+
+1. **安全**：すべての操作は`jj op log`に記録され、元に戻せる
+2. **柔軟**：コミット後でも自由に編集可能
+3. **強力**：複雑な履歴の整理が簡単
+
+### 主要コマンド
+
+| コマンド | 用途 |
+|---------|------|
+| `jj describe` | コミットメッセージを変更 |
+| `jj edit` | 過去のコミットを編集 |
+| `jj squash` | コミットを統合 |
+| `jj split` | コミットを分割 |
+| `jj rebase` | コミットの親を変更 |
+| `jj abandon` | コミットを削除 |
+| `jj op undo` | 操作を取り消し |
+| `jj op restore` | 特定の状態に復元 |
+
+### change IDの重要性
+
+- 履歴を編集しても、change IDで同じコミットを追跡できる
+- コミットハッシュは変わるが、change IDは変わらない
+- コラボレーション時に非常に有用
+
+---
+
+## ベストプラクティス
+
+### 履歴を整理するタイミング
+
+1. **ローカルで作業中**：自由に編集
+2. **プッシュ前**：履歴をクリーンアップ
+3. **プッシュ後**：他の人に影響を与える可能性があるため慎重に
+
+### クリーンな履歴のために
+
+- コミットメッセージは明確に
+- 1つのコミット = 1つの論理的な変更
+- 関連する変更は`squash`で統合
+- 無関係な変更は`split`で分割
+- 意味のある順序にリベース
+
+### 安全に実験する
+
+```bash
+jj op log
+```
+
+を実行して、いつでも戻れることを確認してから大胆に実験しましょう！
+
+---
+
+## チェックリスト
+
+次のセクションに進む前に、以下を確認してください：
+
+- [ ] `jj describe`でメッセージを変更できた
+- [ ] `jj edit`で過去のコミットを編集できた
+- [ ] `jj squash`でコミットを統合できた
+- [ ] `jj split`でコミットを分割できた
+- [ ] `jj rebase`でコミットを移動できた
+- [ ] `jj abandon`でコミットを削除できた
+- [ ] `jj op log`で操作履歴を確認できた
+- [ ] `jj op undo`で操作を取り消せた
+
+---
+
+## 次のステップ
+
+履歴編集の技術をマスターしました！次は [05-advanced.md](05-advanced.md) で、jujutsuの高度な機能を学びましょう。
+
+- change IDの深い理解
+- working copyの仕組み
+- revset言語
+- 操作履歴の活用
+
+jujutsuの全機能を使いこなせるようになります！🚀
+
