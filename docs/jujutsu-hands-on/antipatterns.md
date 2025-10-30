@@ -991,13 +991,13 @@ while read local_ref local_sha remote_ref remote_sha; do
     
     # コンフリクトマーカーを検出（警告のみ、プッシュは止めない）
     # jujutsuのrevsetでコンフリクトを検出
-    if jj log -r "conflict()" --limit 1 2>/dev/null | grep -q "change"; then
+    if jj log -r "conflicts()" --limit 1 2>/dev/null | grep -q "change"; then
         echo ""
         echo "⚠️  警告: コンフリクトマーカーが残っています"
         echo ""
         echo "以下を確認してください："
         echo "  jj status  # コンフリクトを確認"
-        echo "  jj log -r 'conflict()'  # コンフリクト中のコミット一覧"
+        echo "  jj log -r 'conflicts()'  # コンフリクト中のコミット一覧"
         echo ""
         read -p "このままプッシュしますか？ (y/N): " confirm
         if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
@@ -1029,9 +1029,9 @@ exit 0
 ```toml
 [aliases]
 # コンフリクトチェック
-check-conflicts = ["log", "-r", "conflict()"]
-conflicts-count = ["log", "-r", "conflict()", "--no-graph", "-T", "description"]
-has-conflicts = ["log", "-r", "conflict()", "--limit", "1"]
+check-conflicts = ["log", "-r", "conflicts()"]
+conflicts-count = ["log", "-r", "conflicts()", "--no-graph", "-T", "description"]
+has-conflicts = ["log", "-r", "conflicts()", "--limit", "1"]
 
 # プッシュ前チェック（安全確認）
 pre-push-check = ["status"]
@@ -1073,9 +1073,9 @@ echo "🔍 プッシュ前チェックを実行中..."
 echo ""
 
 # 1. コンフリクトをチェック
-if jj log -r "conflict()" --limit 1 2>/dev/null | grep -q "conflict"; then
+if jj log -r "conflicts()" --limit 1 2>/dev/null | grep -q "conflict"; then
     echo "⚠️  警告: コンフリクトが残っています"
-    jj log -r "conflict()" --limit 5
+    jj log -r "conflicts()" --limit 5
     echo ""
     read -p "このままプッシュしますか？ (y/N): " confirm
     if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
@@ -1172,7 +1172,7 @@ function jj_conflict_status() {
     fi
     
     # コンフリクトがあるかチェック
-    local conflicts=$(jj log -r "conflict()" --limit 1 --no-graph --color=never 2>/dev/null)
+    local conflicts=$(jj log -r "conflicts()" --limit 1 --no-graph --color=never 2>/dev/null)
     
     if [ -n "$conflicts" ]; then
         echo "%{$fg_bold[red]%}⚠️ CONFLICT%{$reset_color%} "
@@ -1224,7 +1224,7 @@ function jj_prompt_info() {
     fi
     
     local bookmark=$(jj log -r @ --no-graph -T 'bookmarks' --color=never 2>/dev/null | tr -d '\n')
-    local conflicts=$(jj log -r "conflict()" --limit 1 --no-graph --color=never 2>/dev/null)
+    local conflicts=$(jj log -r "conflicts()" --limit 1 --no-graph --color=never 2>/dev/null)
     
     local status_line=""
     
@@ -1302,7 +1302,7 @@ function __jj_ps1() {
     fi
     
     local bookmark=$(jj log -r @ --no-graph -T 'bookmarks' --color=never 2>/dev/null | tr -d '\n')
-    local conflicts=$(jj log -r "conflict()" --limit 1 --no-graph --color=never 2>/dev/null)
+    local conflicts=$(jj log -r "conflicts()" --limit 1 --no-graph --color=never 2>/dev/null)
     
     local status=""
     
