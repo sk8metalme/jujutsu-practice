@@ -29,6 +29,51 @@
 
 ## AIエージェントの必須動作ルール
 
+### 🚨 PR作成タスクの実行順序（厳守）
+
+PR作成を指示された場合、**必ず以下の順序で実行**してください：
+
+#### ✅ 必須実行: PR作成前のチェックリスト
+
+**重要**: 以下のStepを**スキップせず、順番通りに**実行すること。
+
+```bash
+# Step 1: GitHub認証確認（最優先・スキップ禁止）
+gh auth status
+
+# ↓ エラーが出た場合は、以降の手順を中断し、ユーザーに認証対処を依頼
+
+# Step 2: ブックマーク確認
+jj bookmark list
+
+# Step 3: リモート同期確認  
+jj git fetch
+
+# Step 4: プッシュ
+jj git push --bookmark BOOKMARK_NAME --allow-new
+
+# Step 5: PR作成
+gh pr create --head BOOKMARK_NAME --base main \
+  --title "タイトル" --body "説明"
+
+# Step 6: CI監視
+gh pr checks
+```
+
+### ❌ 禁止事項
+
+1. **Step 1（GitHub認証確認）をスキップすること**
+   - 「後でエラーが出たら対処する」は禁止
+   - 必ず最初に`gh auth status`を実行
+
+2. **エラーを無視して次の手順に進むこと**
+   - Step 1でエラーが出たら、即座に中断
+   - ユーザーに認証対処を依頼
+
+3. **チェックリストの順序を入れ替えること**
+   - 「効率化」のための順序変更は禁止
+   - 記載された順序には理由がある
+
 ### 新機能開発開始時
 
 ```bash
@@ -178,22 +223,65 @@ jj git push --bookmark feature-name --allow-new
 
 これにより、GitのHTTPS認証がGitHub CLIの認証トークンを使用するようになります。
 
+#### 🔧 Cursor環境での特別な対処法
+
+**問題**: Cursor内のターミナルで`gh auth login`を実行すると、TLS証明書エラーが発生する場合があります。
+
+**エラー例**:
+```
+failed to authenticate via web browser: 
+Post "https://github.com/login/device/code": 
+tls: failed to verify certificate: x509: OSStatus -26276
+```
+
+**原因**:
+- Cursorのサンドボックス環境での証明書検証の制約
+- macOSのキーチェーン統合の問題
+
+**解決方法**:
+
+**方法1**: 通常のターミナルアプリで実行（推奨）
+```bash
+# Terminal.app、iTerm2等を開いて実行
+gh auth login
+gh auth setup-git
+
+# 完了後、Cursorに戻って確認
+gh auth status
+```
+
+**方法2**: Personal Access Tokenを使用
+```bash
+# 1. GitHubでトークンを生成
+#    https://github.com/settings/tokens
+#    スコープ: repo, workflow, read:org
+
+# 2. トークンで認証
+echo "YOUR_TOKEN_HERE" | gh auth login --with-token
+gh auth setup-git
+```
+
+**方法3**: SSHに切り替え
+```bash
+# リモートURLをSSHに変更（SSH鍵設定済みの場合）
+git remote set-url origin git@github.com:username/repo.git
+
+# プッシュ時にパスワード不要
+jj git push --bookmark feature-name --allow-new
+```
+
 #### HTTPS vs SSH
 
 **HTTPS（デフォルト）:**
 - `gh auth setup-git` が必要
 - トークンベースの認証
 - ファイアウォール越しでも動作
+- **Cursor環境では認証に工夫が必要**
 
 **SSH（代替案）:**
-```bash
-# リモートURLをSSHに変更
-git remote set-url origin git@github.com:username/repo.git
-
-# SSH鍵の設定が必要
-gh auth login --web
-# "Authenticate with SSH" を選択
-```
+- SSH鍵の設定が必要
+- パスワード不要
+- **Cursor環境でも問題なく動作**
 
 ### GitHub CLI と Jujutsu の統合問題
 
