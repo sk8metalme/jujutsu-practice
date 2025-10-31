@@ -148,6 +148,7 @@ jujutsuの高度な機能を使いこなします。
 - Gitとの連携（`jj git`）
 - 設定のカスタマイズ
 - 高度なワークフロー
+- **🆕 v0.34.0の新機能**（`jj absorb`, `jj parallelize`, `jj evolog`, `jj fix`）
 
 **到達目標：**
 - [ ] change IDの利点を理解している
