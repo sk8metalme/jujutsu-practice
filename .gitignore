@@ -1,8 +1,285 @@
+# セキュリティ - 機密情報
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+*_rsa
+*_dsa
+*_ecdsa
+*_ed25519
+.secrets/
+secrets/
+credentials/
 
-# Backup Files
-# Exclude backup files created by ai-agent-setup scripts
-*.backup.*
-*.bak
+# GitHub認証
+.gh-token
+gh-token
+.github-token
+
+# セキュリティスキャン結果
+security-scan/
+.security-scan/
+
+# OS固有ファイル
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
 *~
-.#*
-#*#
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# エディタ・IDE
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Cursor（セキュリティ上重要な設定は除外）
+.cursor/
+!.cursor/rules/
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+.idea_modules/
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+Session.vim
+Sessionx.vim
+.netrwhist
+tags
+[._]*.un~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# 一時ファイル・バックアップ
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+.*.swp
+.*.swo
+
+# ログファイル
+*.log
+logs/
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# 依存関係（言語別）
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+.npm
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.pytype/
+cython_debug/
+pip-log.txt
+pip-delete-this-directory.txt
+.venv/
+venv/
+ENV/
+env/
+.python-version
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+target/
+.mvn/
+mvnw
+mvnw.cmd
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+.gradletasknamecache
+
+# PHP
+vendor/
+composer.phar
+composer.lock
+.phpunit.result.cache
+phpunit.xml
+
+# Perl
+!Build/
+.last_cover_stats
+/META.yml
+/META.json
+/MYMETA.*
+*.o
+*.pm.tdy
+*.bs
+/_eumm/
+blib/
+pm_to_blib
+MANIFEST.bak
+nytprof.out
+nytprof/
+cover_db/
+
+# Ruby
+*.gem
+*.rbc
+/.config
+/coverage/
+/InstalledFiles
+/pkg/
+/spec/reports/
+/spec/examples.txt
+/test/tmp/
+/test/version_tmp/
+/tmp/
+.bundle/
+Gemfile.lock
+
+# キャッシュ・一時ディレクトリ
+.cache/
+.tmp/
+tmp/
+temp/
+*.cache
+
+# テストカバレッジ
+coverage/
+.nyc_output/
+*.lcov
+
+# ビルド出力
+dist/
+build/
+out/
+bin/
+obj/
+
+# データベース
+*.sqlite
+*.sqlite3
+*.db
+
+# ドキュメント生成
+site/
+_site/
+.sass-cache/
+.jekyll-cache/
+.jekyll-metadata
+
+# プロジェクト固有
+# セキュリティスキャンの状態ファイル
+security-scan/plan.md
+security-scan/state.json
+
+# テスト用の一時ファイル
+test-docs/*
+!test-docs/.gitkeep
+playground/*
+!playground/.gitkeep
+docs/jujutsu-hands-on/playground/*
+!docs/jujutsu-hands-on/playground/.gitkeep
