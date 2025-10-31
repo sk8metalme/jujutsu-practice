@@ -64,25 +64,257 @@ jj commit -m "実験的変更"
 
 ### PR作成前のチェックリスト
 
-1. ブックマークが存在するか確認
+**必須: 以下のチェックを順番に実行**
+
+#### Step 1: GitHub認証確認
+
 ```bash
-jj bookmark list
+# 認証状態を確認
+gh auth status
+
+# 認証が失敗している場合はログイン
+gh auth login
+
+# Git credential helperを設定（重要！）
+gh auth setup-git
 ```
 
-2. なければ作成
+**重要**: `gh auth login` だけでは不十分です。必ず `gh auth setup-git` を実行してください。
+これによりGitのHTTPS認証がGitHub CLIの認証情報を使用するようになります。
+
+#### Step 2: ブックマーク確認
+
 ```bash
+# 現在のブックマーク一覧を確認
+jj bookmark list
+
+# ブックマークがなければ作成（必ず -r '@-' を使用）
 jj bookmark create feature-name -r '@-'
 ```
 
-3. 履歴確認
+#### Step 3: リモート同期確認
+
 ```bash
+# リモートの最新状態を取得
+jj git fetch
+
+# 履歴を確認
 jj log
 ```
 
-4. プッシュとPR作成
+#### Step 4: プッシュ（新規ブックマークの場合）
+
 ```bash
-jj git push --bookmark feature-name
+# 新規ブックマークは --allow-new が必須
+jj git push --bookmark feature-name --allow-new
+```
+
+#### Step 5: PR作成（Jujutsu特有の注意）
+
+```bash
+# --head と --base を明示的に指定（必須）
+gh pr create --head feature-name --base main \
+  --title "タイトル" \
+  --body "説明"
+```
+
+**Jujutsu特有の問題**: `gh pr create` をオプションなしで実行すると
+`could not determine the current branch` エラーが発生します。
+Jujutsuは `.git/HEAD` を更新しないため、必ず `--head --base` を指定してください。
+
+#### Step 6: CI/CD監視
+
+```bash
+# PR番号を確認
+gh pr view <pr-number>
+
+# CI状態を監視
+gh pr checks <pr-number>
+
+# CIが完了するまで定期的にチェック
+```
+
+## GitHub統合とトラブルシューティング
+
+このセクションでは、JujutsuとGitHub/GitHub CLIを統合する際によく発生する問題と解決策を説明します。
+
+### GitHub認証問題
+
+#### 問題1: `could not read Username for 'https://github.com'`
+
+**エラー全文:**
+```
+Error: Git process failed: External git program failed:
+fatal: could not read Username for 'https://github.com': Device not configured
+```
+
+**原因:**
+- HTTPS経由でリポジトリが設定されている
+- `gh auth login` を実行しただけでは、GitのHTTPS認証には反映されない
+- Git credential helperが正しく設定されていない
+
+**解決方法:**
+```bash
+# 1. GitHub CLIで認証
+gh auth login
+
+# 2. Git credential helperを設定（必須）
+gh auth setup-git
+
+# 3. 認証状態を確認
+gh auth status
+# 出力に "✓ Logged in to github.com" が表示されることを確認
+
+# 4. 再度プッシュを試行
+jj git push --bookmark feature-name --allow-new
+```
+
+**重要**: `gh auth setup-git` は、`~/.gitconfig` に以下の設定を追加します：
+```ini
+[credential "https://github.com"]
+    helper = 
+    helper = !/path/to/gh auth git-credential
+```
+
+これにより、GitのHTTPS認証がGitHub CLIの認証トークンを使用するようになります。
+
+#### HTTPS vs SSH
+
+**HTTPS（デフォルト）:**
+- `gh auth setup-git` が必要
+- トークンベースの認証
+- ファイアウォール越しでも動作
+
+**SSH（代替案）:**
+```bash
+# リモートURLをSSHに変更
+git remote set-url origin git@github.com:username/repo.git
+
+# SSH鍵の設定が必要
+gh auth login --web
+# "Authenticate with SSH" を選択
+```
+
+### GitHub CLI と Jujutsu の統合問題
+
+#### 問題2: `could not determine the current branch`
+
+**エラー全文:**
+```
+could not determine the current branch: could not determine current branch: 
+failed to run git: not on any branch
+```
+
+**原因:**
+- GitHub CLI (`gh pr create`) は `.git/HEAD` を読んで現在のブランチを判断
+- Jujutsuは Change IDベースで管理しており、`.git/HEAD` を特定のブランチに向けない
+- Jujutsuの working copy (`@`) は常に "detached HEAD" 状態に相当
+
+**解決方法:**
+```bash
+# ❌ これはエラーになる
 gh pr create
+
+# ✅ --head と --base を明示的に指定
+gh pr create --head docs/feature-name --base main \
+  --title "タイトル" \
+  --body "説明"
+```
+
+**背景知識:**
+- **Git**: ブランチベース管理 → すべてのコミットはブランチに属する
+- **Jujutsu**: Change IDベース管理 → ブックマークは「名札」程度
+
+この思想の違いにより、GitHub CLIのような「Gitを前提とした」ツールとの統合時には注意が必要です。
+
+### プッシュ時のよくあるエラー
+
+#### 問題3: `Refusing to create new remote bookmark`
+
+**エラー全文:**
+```
+Error: Refusing to create new remote bookmark docs/feature-name@origin
+Hint: Use --allow-new to push new bookmark. 
+Use --remote to specify the remote to push to.
+```
+
+**原因:**
+- 新しいブックマークをリモートにプッシュする際の安全機構
+- 誤って新しいブランチを作成するのを防ぐ
+
+**解決方法:**
+```bash
+# 新規ブックマークには --allow-new を付ける
+jj git push --bookmark feature-name --allow-new
+```
+
+#### 問題4: 既存ブックマークの更新
+
+```bash
+# 既存のブックマークを更新する場合は --allow-new 不要
+jj git push --bookmark feature-name
+```
+
+### CI/CD監視のベストプラクティス
+
+#### PR作成後の必須確認
+
+```bash
+# 1. PR詳細を確認
+gh pr view <pr-number>
+
+# 2. CI/CDの状態を確認
+gh pr checks <pr-number>
+# 出力例:
+# CodeRabbit    pending    0    Review in progress
+# Tests         success    ✓    All tests passed
+```
+
+#### CI完了まで監視する理由
+
+- CI失敗時は即座に修正が必要
+- レビュワーはCI成功を待ってからレビュー開始
+- 自動マージ設定がある場合、CI成功が必須
+
+#### 定期的な確認コマンド
+
+```bash
+# 10秒おきにCI状態を確認（シェルループ）
+while true; do 
+  gh pr checks <pr-number>
+  sleep 10
+done
+```
+
+### エラーパターン早見表
+
+| エラーメッセージ | 原因 | 解決方法 |
+|----------------|------|---------|
+| `could not read Username for 'https://github.com'` | Git credential helper未設定 | `gh auth setup-git` 実行 |
+| `could not determine the current branch` | JujutsuはHEADを更新しない | `gh pr create --head X --base Y` |
+| `Refusing to create new remote bookmark` | 新規ブックマークの安全機構 | `--allow-new` フラグ追加 |
+| `Commit XXX is immutable` | リモートコミットの変更試行 | `jj new <target>` で新規作成 |
+| `Warning: Target revision is empty` | 空コミットにブックマーク作成 | `jj commit` 後に `jj bookmark create -r '@-'` |
+| `There are unresolved conflicts` | コンフリクト未解決 | `jj resolve` または手動編集 |
+
+### トラブルシューティングフローチャート
+
+```
+PR作成時にエラー発生
+    ↓
+認証エラー？
+    YES → gh auth setup-git → 再試行
+    NO → ↓
+    ↓
+ブランチ判定エラー？
+    YES → --head --base を追加 → 再試行
+    NO → ↓
+    ↓
+プッシュエラー？
+    YES → --allow-new を追加 → 再試行
+    NO → ↓
+    ↓
+その他のエラー → jj op log を確認 → jj op undo で戻る
 ```
 
 ### マージ（複数親コミット作成）
@@ -198,6 +430,8 @@ jj new main  # mainから新しいコミットを作成
 
 ### エラー時の対処法
 
+#### Jujutsu基本エラー
+
 **`Error: Commit XXX is immutable`**
 - 原因: リモートと同期されたコミットは変更不可
 - 対処: `jj new <target>` で新規コミット作成
@@ -208,6 +442,32 @@ jj new main  # mainから新しいコミットを作成
 
 **`Error: There are unresolved conflicts`**
 - 対処: `jj resolve` または手動編集後 `jj commit`
+
+#### GitHub統合エラー
+
+**`Error: could not read Username for 'https://github.com'`**
+- 原因: Git credential helperが未設定
+- 対処: 
+  ```bash
+  gh auth login
+  gh auth setup-git  # 必須
+  ```
+
+**`Error: could not determine the current branch`**
+- 原因: JujutsuはGitの `.git/HEAD` を更新しない
+- 対処: `gh pr create` に `--head` と `--base` を明示的に指定
+  ```bash
+  gh pr create --head feature-name --base main
+  ```
+
+**`Error: Refusing to create new remote bookmark`**
+- 原因: 新規ブックマークの安全機構
+- 対処: `--allow-new` フラグを追加
+  ```bash
+  jj git push --bookmark feature-name --allow-new
+  ```
+
+#### 操作ミス全般
 
 **操作ミス全般**
 ```bash
