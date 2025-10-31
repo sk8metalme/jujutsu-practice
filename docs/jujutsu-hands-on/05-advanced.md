@@ -670,6 +670,186 @@ Gitの変更をjujutsuに取り込む。
 
 ---
 
+## 9. v0.34.0の新機能（2024-2025追加）
+
+このセクションでは、v0.21.0以降に追加された便利な新機能を紹介します。
+
+### 9.1 `jj absorb`：変更を適切なコミットに自動吸収
+
+`jj absorb`は、作業コピーの変更を、最後にその行を変更したコミットに自動的に移動します。
+
+**使用例：**
+
+```bash
+# シナリオ：複数のコミットで異なるファイルを編集した後、
+# 各ファイルの小さな修正をしたい
+
+# 1. いくつかのコミットを作成
+jj new main
+echo "def hello():" > greet.py
+jj commit -m "feat: add hello function"
+
+echo "def goodbye():" > farewell.py
+jj commit -m "feat: add goodbye function"
+
+# 2. 両方のファイルを修正
+echo "    print('Hello!')" >> greet.py
+echo "    print('Goodbye!')" >> farewell.py
+
+# 3. 各変更を適切なコミットに自動吸収
+jj absorb
+
+# greet.pyの変更は "feat: add hello function" に
+# farewell.pyの変更は "feat: add goodbye function" に
+# 自動的に振り分けられる！
+```
+
+**利点：**
+- `jj squash`を手動で何度も実行する手間が省ける
+- 複数ファイルの修正を一括処理
+- Git の `git absorb` に相当する機能
+
+### 9.2 `jj parallelize`：直列な履歴を並列化
+
+連続したコミットを並列（兄弟）関係に変換します。
+
+**使用例：**
+
+```bash
+# シナリオ：実は独立した3つの機能を直列に開発してしまった
+
+# 変換前の履歴：
+# 3 (feature-c)
+# |
+# 2 (feature-b)
+# |
+# 1 (feature-a)
+# |
+# 0 (main)
+
+# これらを並列化
+jj parallelize feature-a::feature-c
+
+# 変換後：
+#     3
+#    /|\
+#   1 2 3  (すべてmainの子になる)
+#    \|/
+#     0
+```
+
+**利点：**
+- 後から「実は独立した変更だった」ことに気づいた時に便利
+- 複数のPRを並行してレビューしてもらえる
+- ブランチの依存関係を整理できる
+
+### 9.3 `jj evolog`：変更の進化履歴を表示
+
+同じchange IDを持つコミットの履歴を表示します。
+
+**使用例：**
+
+```bash
+# コミットを何度も編集した履歴を確認
+jj evolog
+
+# 特定のコミットの進化を追跡
+jj evolog -r my-feature
+
+# パッチの差分も表示
+jj evolog -p
+```
+
+**出力例：**
+```
+○  qpvuntsm user@example.com 2025-01-15 10:30:00 abc123de
+│  feat: add user authentication (v3)
+○  qpvuntsm user@example.com 2025-01-15 09:45:00 def456gh
+│  feat: add user authentication (v2)
+○  qpvuntsm user@example.com 2025-01-15 09:00:00 ghi789jk
+   feat: add user authentication (v1)
+```
+
+**利点：**
+- コミットがどう進化したかを可視化
+- レビュー対応の履歴を追跡
+- change IDの概念を体感できる
+
+### 9.4 `jj fix`：自動フォーマット適用
+
+コード整形ツールを複数のコミットに自動適用します。
+
+**設定例（`~/.jjconfig.toml`）：**
+
+```toml
+[fix.tools.black]
+command = ["black", "-", "--stdin-filename=$path"]
+patterns = ["glob:'**/*.py'"]
+
+[fix.tools.prettier]
+command = ["prettier", "--stdin-filepath", "$path"]
+patterns = ["glob:'**/*.js'", "glob:'**/*.ts'"]
+
+[fix.tools.rustfmt]
+command = ["rustfmt"]
+patterns = ["glob:'**/*.rs'"]
+```
+
+**使用例：**
+
+```bash
+# 現在のコミットをフォーマット
+jj fix
+
+# 特定の範囲のコミットをフォーマット
+jj fix -s 'main..@'
+
+# 未変更ファイルも含めて全ファイルをフォーマット
+jj fix --include-unchanged-files
+```
+
+**利点：**
+- 複数のコミットに一括でフォーマット適用
+- 子孫コミットも自動的に更新される
+- CI/CDでのフォーマットエラーを事前に防げる
+
+### 9.5 その他の改善点
+
+#### `jj next` / `jj prev` コマンド
+
+履歴を前後に移動します。
+
+```bash
+# 親コミットに移動
+jj prev
+
+# 子コミットに移動
+jj next
+```
+
+#### `jj simplify-parents`
+
+不要な親の関係を整理します。
+
+```bash
+# マージコミットの親を最適化
+jj simplify-parents
+```
+
+#### `jj sign` / `jj unsign`
+
+コミットに暗号署名を追加/削除します（GPG対応）。
+
+```bash
+# コミットに署名
+jj sign
+
+# 署名を削除
+jj unsign
+```
+
+---
+
 ## やってみよう！
 
 ### 練習1：change IDの追跡
@@ -715,6 +895,7 @@ Gitの変更をjujutsuに取り込む。
 - [ ] Gitリポジトリとの連携方法を理解した
 - [ ] 設定をカスタマイズできる
 - [ ] 高度なワークフローを理解した
+- [ ] **v0.34.0の新機能を試せる**（`jj absorb`, `jj parallelize`, `jj evolog`, `jj fix`）
 
 ---
 
