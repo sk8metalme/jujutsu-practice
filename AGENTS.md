@@ -70,6 +70,52 @@ docs/           # ドキュメント
 - 使用例を含める
 - READMEを最新に保つ
 
+## バージョン管理: Jujutsu (jj)
+
+このプロジェクトでは**Jujutsu (jj)**をバージョン管理システムとして使用しています。
+
+### 基本原則
+
+- **優先使用**: Gitコマンドではなく、`jj`コマンドを使用
+- **Change IDベース**: ブックマーク（ブランチ名）は必要な時だけ付ける
+- **柔軟な開発**: 個人作業中はブックマーク不要、チーム共有時に作成
+
+### 開発フロー
+
+**新機能開発開始:**
+```bash
+jj new main                          # mainから新しい作業を開始
+# ... 開発 ...
+jj commit -m "feat: 機能説明"
+jj bookmark create feature/xxx -r '@-'  # PR作成時
+```
+
+**重要な注意事項:**
+- `jj edit root()` は使用禁止（immutableエラー）→ `jj new 'root()'` を使用
+- `jj merge` は存在しない → `jj new parent1 parent2` を使用
+- `jj branch` は古い → `jj bookmark` を使用
+- 空コミットにブックマークを付けない → 必ず `-r '@-'` を使用
+
+### 詳細ガイド
+
+AIエージェントの具体的な動作については、以下を参照してください：
+
+- **User Rules設定**: `docs/setup-cursor-user-rules.md`
+- **User Rulesテキスト**: `docs/cursor-user-rules-jujutsu.md`
+- **実践ガイド**: `docs/jujutsu-hands-on/cursor-ai-workflow.md`
+- **ハンズオンガイド**: `docs/jujutsu-hands-on/`
+
+### エイリアス活用
+
+プロジェクトでは以下のエイリアスが設定されています：
+
+- `bcp`: `bookmark create -r @-` - **最重要**（コミット後のブックマーク作成）
+- `nb`: `new main` - mainから新規作業開始
+- `rs`: `resolve` - コンフリクト解決
+- `n`: `new` - 新規コミット作成
+- `c`: `commit` - コミット
+- `l`: `log` - ログ表示
+
 ## Claude Code 連携ガイド
 
 ### 目的
