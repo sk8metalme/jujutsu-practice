@@ -82,6 +82,111 @@ jj git fetch
    - AIエージェントはpush/PR作成コマンドを実行しない
    - 必要なコマンドを提示するのみ
 
+## ⚠️ 作業開始前の必須手順（全作業共通）
+
+### 原則：作業前の状態同期
+
+**重要**: どんな作業でも、開始前に必ずローカルとリモートの状態を同期・確認する
+
+**理由:**
+- ローカルとリモートの差異 = 認識のズレ
+- 認識のズレ = 意図せぬ不具合の温床
+- コンフリクト、重複作業、論理的矛盾を予防
+
+### 必須チェック手順
+
+```bash
+# Step 1: リモートの最新状態を取得（必須）
+jj git fetch
+
+# Step 2: ローカルのmainに未プッシュのコミットがあるか確認（重要！）
+jj log -r 'main & ~main@origin'
+
+# 出力がある場合 = 未プッシュのコミットがある → Step 3-A へ
+# 出力がない場合 = 安全 → Step 3-B へ
+```
+
+### Step 3-A: 未プッシュのコミットがある場合の対処
+
+**⚠️ 警告**: `jj bookmark set main -r 'main@origin'` を実行すると、
+未プッシュのコミットへの参照が失われます（孤立します）。
+
+**対処法1: 一時ブックマークで保護してから更新（推奨）**
+```bash
+# 未プッシュのコミットを一時ブックマークで保護
+jj bookmark create main-local-work -r 'main'
+
+# その後、mainを最新に更新
+jj bookmark set main -r 'main@origin'
+
+# 後で必要に応じて統合
+# jj rebase -d main -s 'main-local-work'
+# jj bookmark set main -r 'main-local-work'
+# jj bookmark delete main-local-work
+```
+
+**対処法2: プッシュしてから同期**
+```bash
+# 未プッシュのコミットをプッシュ
+jj git push --bookmark main
+
+# リモートを再取得
+jj git fetch
+
+# mainを更新（この時点で安全）
+jj bookmark set main -r 'main@origin'
+```
+
+**対処法3: 不要なコミットの場合**
+```bash
+# 未プッシュのコミットが不要な場合のみ実行
+jj bookmark set main -r 'main@origin'
+
+# 孤立したコミットは後から `jj log -r 'all()'` で確認可能
+```
+
+### Step 3-B: 未プッシュのコミットがない場合（安全）
+
+```bash
+# リモートが進んでいる場合、mainを更新
+jj bookmark set main -r 'main@origin'
+
+# 確認
+jj log -r 'main' -r 'main@origin'
+```
+
+### Step 4: 作業開始
+
+```bash
+# 最新のmainから新しい作業を開始
+jj new main
+```
+
+### ベストプラクティス
+
+**原則:**
+- ✅ mainは常にリモートの追跡用（ローカルでmainに直接コミットしない）
+- ✅ ローカルの作業は別のブックマークで行う
+- ✅ 未プッシュのコミットがある場合は必ず保護してから更新
+- ✅ 作業開始前に必ず `jj git fetch` を実行
+- ✅ ユーザーから「マージ済み」「プッシュ済み」の情報を受け取ったら必ず同期確認
+
+**悪い例:**
+```bash
+# ❌ Bad: mainで直接作業
+jj edit main
+# コミット...
+```
+
+**良い例:**
+```bash
+# ✅ Good: mainから派生した別のブックマークで作業
+jj new main
+# 作業...
+jj commit -m "実装完了"
+jj bookmark create feature/my-work -r '@-'
+```
+
 ### 新機能開発開始時
 
 ```bash
