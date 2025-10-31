@@ -49,16 +49,20 @@ jj bookmark list
 # Step 3: リモート同期確認  
 jj git fetch
 
-# Step 4: プッシュ
-jj git push --bookmark BOOKMARK_NAME --allow-new
+# Step 4: プッシュコマンドを提示（実行しない）
+# 以下のコマンドをユーザーに提示するのみ：
+# jj git push --bookmark BOOKMARK_NAME --allow-new
 
-# Step 5: PR作成
-gh pr create --head BOOKMARK_NAME --base main \
-  --title "タイトル" --body "説明"
+# Step 5: PR作成コマンドを提示（実行しない）
+# 以下のコマンドをユーザーに提示するのみ：
+# gh pr create --head BOOKMARK_NAME --base main \
+#   --title "タイトル" --body "説明"
 
-# Step 6: CI監視
-gh pr checks
+# Step 6: CI監視コマンドを提示
+# gh pr checks <pr-number>
 ```
+
+**重要**: **Git pushとPR作成はAIエージェントが実行しません**。ユーザーが手動で実行してください。必要なコマンドを提示するのみです。
 
 ### ❌ 禁止事項
 
@@ -73,6 +77,10 @@ gh pr checks
 3. **チェックリストの順序を入れ替えること**
    - 「効率化」のための順序変更は禁止
    - 記載された順序には理由がある
+
+4. **Git pushやPR作成を実行すること**
+   - AIエージェントはpush/PR作成コマンドを実行しない
+   - 必要なコマンドを提示するのみ
 
 ### 新機能開発開始時
 
@@ -118,10 +126,7 @@ jj commit -m "実験的変更"
 gh auth status
 
 # 認証が失敗している場合はログイン
-gh auth login
-
-# Git credential helperを設定（重要！）
-gh auth setup-git
+# ⚠️ 注意: AIエージェントは実行しません。ユーザーが手動で実行してください。
 ```
 
 **重要**: `gh auth login` だけでは不十分です。必ず `gh auth setup-git` を実行してください。
@@ -149,12 +154,16 @@ jj log
 
 #### Step 4: プッシュ（新規ブックマークの場合）
 
+**AIエージェントは実行しません。以下のコマンドをユーザーに提示するのみ：**
+
 ```bash
 # 新規ブックマークは --allow-new が必須
 jj git push --bookmark feature-name --allow-new
 ```
 
 #### Step 5: PR作成（Jujutsu特有の注意）
+
+**AIエージェントは実行しません。以下のコマンドをユーザーに提示するのみ：**
 
 ```bash
 # --head と --base を明示的に指定（必須）
@@ -168,6 +177,8 @@ gh pr create --head feature-name --base main \
 Jujutsuは `.git/HEAD` を更新しないため、必ず `--head --base` を指定してください。
 
 #### Step 6: CI/CD監視
+
+**AIエージェントは実行しません。以下のコマンドをユーザーに提示するのみ：**
 
 ```bash
 # PR番号を確認
@@ -225,7 +236,7 @@ jj git push --bookmark feature-name --allow-new
 
 #### 🔧 Cursor環境での特別な対処法
 
-**問題**: Cursor内のターミナルで`gh auth login`を実行すると、TLS証明書エラーが発生する場合があります。
+**問題**: AIエージェントがCursor内で`gh auth login`を自動実行しようとすると、環境によってはTLS証明書エラーが発生する場合があります。
 
 **エラー例**:
 ```
@@ -234,21 +245,27 @@ Post "https://github.com/login/device/code":
 tls: failed to verify certificate: x509: OSStatus -26276
 ```
 
-**原因**:
+**原因:**
 - Cursorのサンドボックス環境での証明書検証の制約
-- macOSのキーチェーン統合の問題
+- macOSのキーチェーンへのアクセス制限
+- ブラウザベースの認証フローが動作しない場合がある
 
-**解決方法**:
+**重要**: AIエージェントは認証コマンドを実行しません。認証が必要な場合は、**ユーザーがCursor内のターミナルまたは通常のターミナルアプリで手動で実行**してください。Cursor内のターミナルでも、ユーザーが手動で実行する場合は問題なく動作する場合がほとんどです。
 
-**方法1**: 通常のターミナルアプリで実行（推奨）
+**解決方法:**
+
+**方法1**: Cursor内のターミナルまたは通常のターミナルアプリで実行
+
 ```bash
-# Terminal.app、iTerm2等を開いて実行
+# Cursor内のターミナルまたはTerminal.app、iTerm2等で実行
 gh auth login
 gh auth setup-git
 
-# 完了後、Cursorに戻って確認
+# 完了後、認証状態を確認
 gh auth status
 ```
+
+**注意**: Cursor内のターミナルで`gh auth login`が失敗する場合は、通常のターミナルアプリ（Terminal.app、iTerm2等）で実行してください。
 
 **方法2**: Personal Access Tokenを使用
 ```bash
@@ -256,7 +273,7 @@ gh auth status
 #    https://github.com/settings/tokens
 #    スコープ: repo, workflow, read:org
 
-# 2. トークンで認証
+# 2. 通常のターミナルでトークンで認証
 echo "YOUR_TOKEN_HERE" | gh auth login --with-token
 gh auth setup-git
 ```
@@ -276,7 +293,7 @@ jj git push --bookmark feature-name --allow-new
 - `gh auth setup-git` が必要
 - トークンベースの認証
 - ファイアウォール越しでも動作
-- **Cursor環境では認証に工夫が必要**
+- **Cursor環境（サンドボックス）では認証に工夫が必要な場合がある**
 
 **SSH（代替案）:**
 - SSH鍵の設定が必要
@@ -537,6 +554,8 @@ jj new main  # mainから新しいコミットを作成
 - 原因: Git credential helperが未設定
 - 対処: 
   ```bash
+  # ⚠️ AIエージェントは実行しません。ユーザーが手動で実行してください。
+  # Cursor内のターミナルまたは通常のターミナルアプリで実行
   gh auth login
   gh auth setup-git  # 必須
   ```
@@ -587,9 +606,10 @@ jj commit -m "feat: ユーザー認証機能を実装"
 # 4. ブックマーク作成（PR用）
 jj bookmark create feature/user-auth -r '@-'
 
-# 5. プッシュとPR作成
-jj git push --bookmark feature/user-auth
-gh pr create --title "ユーザー認証機能" --body "詳細説明"
+# 5. プッシュとPR作成（ユーザーが実行）
+# jj git push --bookmark feature/user-auth --allow-new
+# gh pr create --head feature/user-auth --base main \
+#   --title "ユーザー認証機能" --body "詳細説明"
 ```
 
 ### シナリオ2: バグ修正
@@ -599,8 +619,8 @@ jj new main
 vim src/login.rs
 jj commit -m "fix: ログイン時のnullポインタエラーを修正"
 jj bookmark create fix/login-bug -r '@-'
-jj git push --bookmark fix/login-bug
-gh pr create
+# ユーザーが実行: jj git push --bookmark fix/login-bug --allow-new
+# ユーザーが実行: gh pr create --head fix/login-bug --base main
 ```
 
 ### シナリオ3: 個人実験（ブックマーク不要）

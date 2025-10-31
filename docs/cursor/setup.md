@@ -24,7 +24,7 @@ Cursor Settings > General > Rules for AI に設定するルールで、**すべ�
 プロジェクト内の以下のファイルを開きます：
 
 ```
-docs/cursor-user-rules-jujutsu.md
+docs/cursor/user-rules.md
 ```
 
 このファイルには、AIエージェントがJujutsuを使うための完全なルールが記述されています。
@@ -48,7 +48,7 @@ Ctrl + ,
 
 ### ステップ4: ルールをコピー＆ペースト
 
-1. `docs/cursor-user-rules-jujutsu.md` の内容をすべてコピー
+1. `docs/cursor/user-rules.md` の内容をすべてコピー
 2. **Rules for AI** のテキストボックスに貼り付け
 
 **注意:**
@@ -150,13 +150,66 @@ jj config set --user aliases.nb '["new", "main"]'
 jj config set --user aliases.rs '["resolve"]'
 ```
 
+### GitHub認証エラー
+
+**重要**: AIエージェントは認証コマンドを実行しません。認証が必要な場合は、ユーザーがCursor内のターミナルまたは通常のターミナルアプリで手動で実行してください。
+
+**注意**: Cursor内のターミナルで`gh auth login`が失敗する場合は、通常のターミナルアプリ（Terminal.app、iTerm2等）で実行してください。
+
+**エラー例:**
+```
+failed to authenticate via web browser: 
+Post "https://github.com/login/device/code": 
+tls: failed to verify certificate: x509: OSStatus -26276
+```
+
+**原因:**
+- Cursorのサンドボックス環境での証明書検証の制約
+- macOSのキーチェーンへのアクセス制限
+- ブラウザベースの認証フローが動作しない場合がある
+
+**解決方法:**
+
+**方法1**: Cursor内のターミナルまたは通常のターミナルアプリで実行
+
+```bash
+# Cursor内のターミナルまたはTerminal.app、iTerm2等で実行
+gh auth login
+gh auth setup-git
+
+# 完了後、認証状態を確認
+gh auth status
+```
+
+**方法2**: Personal Access Tokenを使用
+```bash
+# 1. GitHubでトークンを生成
+#    https://github.com/settings/tokens
+#    スコープ: repo, workflow, read:org
+
+# 2. 通常のターミナルでトークンで認証
+echo "YOUR_TOKEN_HERE" | gh auth login --with-token
+gh auth setup-git
+```
+
+**方法3**: SSHに切り替え
+```bash
+# リモートURLをSSHに変更（SSH鍵設定済みの場合）
+git remote set-url origin git@github.com:username/repo.git
+
+# プッシュ時にパスワード不要
+jj git push --bookmark feature-name --allow-new
+```
+
+詳細は [retrospective-gh-auth-failure.md](../retrospective-gh-auth-failure.md) を参照してください。
+
 ---
 
 ## ルールのカスタマイズ
 
 ### 個人の好みに合わせる
 
-`docs/cursor-user-rules-jujutsu.md`を編集して、以下をカスタマイズできます：
+`docs/cursor/user-rules.md`を編集して、以下をカスタマイズできます：
 
 - **ブランチ命名規則**: `feature/`, `fix/`, `docs/` など
 - **コミットメッセージフォーマット**: Conventional Commits形式など
@@ -186,7 +239,7 @@ User Rulesは以下の場所に保存されていますが、直接編集は推�
 ```
 
 **推奨バックアップ方法:**
-1. `docs/cursor-user-rules-jujutsu.md`をGitで管理
+1. `docs/cursor/user-rules.md`をGitで管理
 2. 定期的にUser Rulesの内容をコピーして保存
 3. dotfilesリポジトリに含める
 
@@ -194,7 +247,7 @@ User Rulesは以下の場所に保存されていますが、直接編集は推�
 
 ルールを更新する場合：
 
-1. `docs/cursor-user-rules-jujutsu.md`を編集
+1. `docs/cursor/user-rules.md`を編集
 2. Cursor Settings > General > Rules for AI に再度コピー＆ペースト
 
 ---
@@ -203,9 +256,9 @@ User Rulesは以下の場所に保存されていますが、直接編集は推�
 
 ### このプロジェクトのドキュメント
 
-- **ハンズオンガイド**: `docs/jujutsu-hands-on/`
-- **Cursor実践ガイド**: `docs/jujutsu-hands-on/cursor-ai-workflow.md`
-- **Jujutsuを選ぶ理由**: `docs/jujutsu-hands-on/why-jujutsu.md`
+- **ハンズオンガイド**: `../jujutsu-hands-on/`
+- **Cursor実践ガイド**: `workflow.md`
+- **Jujutsuを選ぶ理由**: `../jujutsu-hands-on/why-jujutsu.md`
 
 ### 公式ドキュメント
 
@@ -235,7 +288,7 @@ User Rulesは以下の場所に保存されていますが、直接編集は推�
 
 ✅ **設定完了チェックリスト:**
 
-- [ ] `docs/cursor-user-rules-jujutsu.md`の内容を確認
+- [ ] `docs/cursor/user-rules.md`の内容を確認
 - [ ] Cursor Settings > General > Rules for AI に貼り付け
 - [ ] 新規プロジェクトで動作確認
 - [ ] AIエージェントが`jj`コマンドを使うことを確認

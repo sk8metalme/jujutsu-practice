@@ -100,9 +100,9 @@ jj bookmark create feature/xxx -r '@-'  # PR作成時
 
 AIエージェントの具体的な動作については、以下を参照してください：
 
-- **User Rules設定**: `docs/setup-cursor-user-rules.md`
-- **User Rulesテキスト**: `docs/cursor-user-rules-jujutsu.md`
-- **実践ガイド**: `docs/jujutsu-hands-on/cursor-ai-workflow.md`
+- **User Rules設定**: `docs/cursor/setup.md`
+- **User Rulesテキスト**: `docs/cursor/user-rules.md`
+- **実践ガイド**: `docs/cursor/workflow.md`
 - **ハンズオンガイド**: `docs/jujutsu-hands-on/`
 
 ### エイリアス活用
