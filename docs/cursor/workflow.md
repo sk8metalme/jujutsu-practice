@@ -14,8 +14,8 @@
    ```
 
 2. **Cursor User Rules の設定**
-   - `docs/setup-cursor-user-rules.md`を参照
-   - `docs/cursor-user-rules-jujutsu.md`の内容をCursor Settingsに設定
+   - `docs/cursor/setup.md`を参照
+   - `docs/cursor/user-rules.md`の内容をCursor Settingsに設定
 
 3. **Jujutsuエイリアスの設定**
    ```bash
@@ -27,8 +27,25 @@
 4. **GitHub CLI（オプション）**
    ```bash
    brew install gh
-   gh auth login
+   gh auth login  # 通常のターミナルまたはCursor内のターミナルで実行
    ```
+
+---
+
+## ⚠️ 重要な注意事項
+
+### Git PushとPR作成について
+
+**AIエージェントはpushコマンドやPR作成コマンドを実行しません。**
+必要なコマンドを提示するのみです。ユーザーが手動で実行してください。
+
+### Cursor環境でのGitHub認証
+
+**AIエージェントは認証コマンドを実行しません。**認証が必要な場合は、ユーザーがCursor内のターミナルまたは通常のターミナルアプリで手動で実行してください。
+
+**注意**: Cursor内のターミナルで`gh auth login`が失敗する場合は、通常のターミナルアプリ（Terminal.app、iTerm2等）で実行してください。
+
+詳細は [User Rules](user-rules.md#cursor環境での特別な対処法) を参照してください。
 
 ---
 
@@ -71,7 +88,7 @@
    jj bookmark create feature/user-profile-edit -r '@-'
    ```
 
-6. **状況説明**
+6. **状況説明とコマンド提示**
    ```
    実装が完了しました。
    
@@ -81,11 +98,12 @@
    
    次のステップ:
    1. テストを実行して確認
-   2. PRを作成してレビュー依頼
+   2. 以下のコマンドでプッシュとPR作成（ユーザーが実行）
    
    PR作成コマンド:
-   jj git push --bookmark feature/user-profile-edit
-   gh pr create
+   jj git push --bookmark feature/user-profile-edit --allow-new
+   gh pr create --head feature/user-profile-edit --base main \
+     --title "ユーザープロフィール編集機能" --body "詳細説明"
    ```
 
 ### シナリオ2: バグ修正（迅速対応）
@@ -569,10 +587,10 @@ jj log
 
 ## 参考資料
 
-- **ハンズオンガイド**: `docs/jujutsu-hands-on/`
-- **User Rules設定**: `docs/setup-cursor-user-rules.md`
-- **User Rulesテキスト**: `docs/cursor-user-rules-jujutsu.md`
-- **Jujutsuを選ぶ理由**: `docs/jujutsu-hands-on/why-jujutsu.md`
+- **ハンズオンガイド**: `../jujutsu-hands-on/`
+- **User Rules設定**: `setup.md`
+- **User Rulesテキスト**: `user-rules.md`
+- **Jujutsuを選ぶ理由**: `../jujutsu-hands-on/why-jujutsu.md`
 
 Happy Coding with Cursor + Jujutsu! 🚀
 
